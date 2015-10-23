@@ -49,7 +49,23 @@ before(function(callback) {
     console.log('rodo!')
     // here you can load fixtures, etc.
     callback(err, sails);
+
+    // build-test-dataもどき
+    _.each(sails.models,function(model){
+      model.build = function(params){
+        return params;
+      }
+    });
   });
+
+  //global.sync = require("synchronize");
+  //_.each(sails.models,function(model){
+  //  _.map(model,function(attrValue,attrKey){
+  //    if(typeof attrValue=="function"){
+  //      model[attrKey+"Sync"]=sync(attrValue);
+  //    }
+  //  });
+  //});
 });
 
 after(function(done) {

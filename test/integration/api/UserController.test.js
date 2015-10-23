@@ -17,10 +17,11 @@ var app;
 describe('UserController', function () {
   before(function(){
     // すべてのModelを自動探索して下記処理を裏で行うようにできたら、sails版のbuild-test-dataプラグインになるかも？
-    User.build = function(params){
-      // 実際はここでUserのプロパティとbindしたい。
-      return params;
-    }
+    // => とりあえずbootsrap.jsでやってみる。
+    //User.build = function(params){
+    //  // 実際はここでUserのプロパティとbindしたい。
+    //  return params;
+    //}
   });
   describe('findById', function () {
     it('findbyId should return User', function (done) {
