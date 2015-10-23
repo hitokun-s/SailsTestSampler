@@ -7,7 +7,7 @@ var assert = require('assert');
 var async = require('async');
 var sinon = require("sinon");
 var stubs = require('../../stubs.js');
-//var UserController = require('../../../api/controllers/UserController');
+//var UserController = require('../../../api/controllers/UserController'); // こんなことしなくてもいい
 
 var Sails = require('sails');
 
@@ -35,9 +35,9 @@ describe('UserController', function () {
       // Stubを作成
       sinon.stub(User, 'findById').callsArgWith(1, null, mockUser);
 
-      var req = {param:sinon.stub().returns(123)}; // TODO これは、実ソース側で、req.param("id")としている場合にしか対応できなさそう。。
-      // params.all()　とかする場合もありうる。
-      var res = {json: sinon.spy()};
+      var req = {param:sinon.stub().returns(123)}; // req.param([param name]) という関数を置換 => params.all()　とかする場合には対応できない。
+      var res = {json: sinon.spy()}; // res.json()関数を置換
+
       //UserController.findById(req, res);
       controller.findById(req, res);
 
@@ -62,7 +62,47 @@ describe('UserController', function () {
 
     });
   });
+  describe("test action calling HogeService:Mock", function(){
+    it("test hoge service called as a mock ", function(done){
+      var hogeServiceMock = sinon.mock(HogeService);
+
+      // 下記のうち1つしか書けないみたい（複数併記するとエラーになる）。ちょっと不便。
+      hogeServiceMock.expects("hoge").once(); // 1回だけ呼ばれる
+      //hogeServiceMock.expects("hoge").atLeast(1); //最低1回は呼ばれる
+      //hogeServiceMock.expects("hoge").atMost(1); //最大// 1回は呼ばれる
+      //hogeServiceMock.expects("hoge").exactly(1); //ちょうど指定した回数だけ呼ばれる
+      //hogeServiceMock.expects("hoge").withArgs(123); //指定した引数で呼ばれる
+
+      //hogeServiceMock.expects("hoge").twice();// これだと当然エラーになる
+
+      var controller = sails.controllers.user;
+
+      var req = {param:sinon.stub().returns(123)};
+      var res = {json: sinon.spy()};
+
+      controller.hoge(req, res);
+
+      hogeServiceMock.verify(); // mockに課した条件が満たされているかチェックする（満たされてないならエラー発生）
+      done();
+    });
+  });
+  describe("test action calling HogeService:Spy", function(){
+    it("test hoge service called as a spy ", function(done){
+
+      var hogeMethodSpy = sinon.spy(HogeService, "hoge");
+
+      var controller = sails.controllers.user;
+
+      var req = {param:sinon.stub().returns(123)};
+      var res = {json: sinon.spy()};
+
+      controller.hoge(req, res);
+
+      assert(hogeMethodSpy.calledOnce); // node.jsのAssert
+      sinon.assert.calledOnce(hogeMethodSpy); // sinonにもAssert機能が完備されている。
+      done();
+    });
+  });
   after(function(){
-    //app.lower(done);
   });
 });

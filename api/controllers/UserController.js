@@ -23,11 +23,9 @@ module.exports = {
     });
   },
   // serviceを使うケース
-  findByName:function(req,res){
-    var params = req.params.all();
-    UserService.findByName(params.name, function(user) {
-      return res.json(user);
-    });
+  hoge:function(req,res){
+    var resp = HogeService.hoge(req.param("id"));
+    return res.json(resp);
   }
 };
 
