@@ -2,107 +2,143 @@
 // http://timjrobinson.com/unit-testing-javascript-use-sinon-js/
 // https://github.com/fdvj/wolfpack/issues/2
 
-var request = require('supertest');
+//var request = require('supertest'); // apiレベルのテストでのみ必要。
 var assert = require('assert');
 var async = require('async');
 var sinon = require("sinon");
-var stubs = require('../../stubs.js');
-//var UserController = require('../../../api/controllers/UserController'); // こんなことしなくてもいい
-
-var Sails = require('sails');
-
-// create a variable to hold the instantiated sails server
-var app;
+//var UserController = require('../../../api/controllers/UserController'); // こんなことしなくてもいいし、してはいけない。
 
 describe('UserController', function () {
+  var controller;// grails-spock風に、controller変数にしてみる。
   before(function(){
-    // すべてのModelを自動探索して下記処理を裏で行うようにできたら、sails版のbuild-test-dataプラグインになるかも？
-    // => とりあえずbootsrap.jsでやってみる。
-    //User.build = function(params){
-    //  // 実際はここでUserのプロパティとbindしたい。
-    //  return params;
-    //}
+    controller = sails.controllers.user;
   });
-  describe('findById', function () {
+
+   // ************************************************************
+   // アクション内でリソースを取得して非同期にレスポンスするケース
+   // ************************************************************
+  describe('test action responding async', function () {
+    // Userを作成しておく。
+    before(function (done) {
+      User.create({id: 123, name: "hitokun"}).exec(function createCB(err, created) {
+        console.log(err ? "error:" + err : "created:" + JSON.stringify(created));
+        done();
+      });
+    });
+    // 非同期処理をテストするときは、doneをうまく使うこと！
     it('findbyId should return User', function (done) {
 
-      //var mockUser = {id:123, name :"hitokun"};
-      var mockUser = User.build({id:123, name :"hitokun"});//なんちゃってbuild-test-data風
+      var req = {param: sinon.stub().returns(123)}; // req.param([param name]) という関数を置換 => params.all()　とかする場合には対応できない。
+      var res = {json: function(status, json){ //ちょっと苦しい？でもこれしか思いつかない
+        assert(status ==  200);
+        assert(json[0].id ==  123);
+        assert(json[0].name ==  "hitokun");
+        done(); // これを呼ばないとテストが終了せずtimeoutエラーになります
+      }};
 
-      // この呼び出しを進化させれば、grails * spockの、@TestFor(UserController)　のようなこともできるかも？
-      var controller = sails.controllers.user;
+      controller.findById(req, res); // = UserController.findById(req, res);
 
-      // Stubを作成
-      sinon.stub(User, 'findById').callsArgWith(1, null, mockUser);
-
-      var req = {param:sinon.stub().returns(123)}; // req.param([param name]) という関数を置換 => params.all()　とかする場合には対応できない。
-      var res = {json: sinon.spy()}; // res.json()関数を置換
-
-      //UserController.findById(req, res);
-      controller.findById(req, res);
-
-      // Grailsのような、assert res.json.id == 123 という方法の代わりに、res.json()の引数が何だったjか、をチェックする作戦。
-      assert(res.json.calledWith(200, {id:123, name: "hitokun"}));
-      // スタブを戻しておく
-      User.findById.restore();
-      done(); // これを呼ばないとテストが終了せず、timeoutエラーになる。
-
-      // 非同期テストの場合は、それが終わったタイミングでdone()を実行すること。
-      //request(sails.hooks.http.app)
-      //  .get('/user/findById')  //Path and method
-      //  .send({ id:123 })
-      //  .set('Accept', 'application/json')
-      //  .expect('Content-Type', /json/)
-      //  .expect(200)
-      //  .end(function(err, res){
-      //    if (err) throw err;
-      //    console.log(res.body);
-      //    assert.equal(res.body.id, 123)
-      //  });
-
+      // アクションの中で、非同期にres.jsonを実行しているため、下記はエラーになる！！！
+      //assert(res.json.calledOnce);
+      //assert(res.json.getCall(0).args[0] ==  200);
+      //assert(res.json.getCall(0).args[1].id ==  123);
+      //assert(res.json.getCall(0).args[1].name == "hitokun");
     });
-  });
-  describe("test action calling HogeService:Mock", function(){
-    it("test hoge service called as a mock ", function(done){
-      var hogeServiceMock = sinon.mock(HogeService);
+  }),
+    // ****************************************************************************************************
+    // Stub:（１）テスト対象中で使用している、あるオブジェクトのあるメソッドを、単に置換したい場合（未実装の場合など）、
+    // もしくは、（２）所定の動きをする関数を作成したい場合
+    // ****************************************************************************************************
+    describe("test action calling HogeService:Stub", function () {
+      before(function () {
+        // サービス名はすべて小文字で「sails.services.hogeservice」とするか、もしくは単に「HogeService」でもOK。
+        // （１）の例
+        sinon.stub(sails.services.hogeservice, 'hoge', function (id) {
+          return {user: id};
+        });
+      });
+      after(function () {
+        // restoreを忘れると、別のテストでstubしたときに、二重wrapエラーになる。
+        sails.services.hogeservice.hoge.restore();
+      });
+      it("test action calling HogeService:Stub", function () {
+
+        var req = {param: sinon.stub().returns(123)};// （２）の例
+        var res = {json: sinon.spy()};
+        controller.hoge(req, res);
+
+        console.log(res.json.getCall(0).args[0]); // 1回目のコールの第一引数を取得
+        console.log(res.json.args[0][0]); // 1回目のコールの第一引数を取得
+
+        assert(res.json.calledWith({user: 123}));
+        assert(res.json.getCall(0).args[0].user == 123);
+      });
+    }),
+    // ****************************************************************************************************
+    // Spy:（１）テスト対象中で使用している＜あるオブジェクトのあるメソッドをラップし、呼び出し回数や引数をチェックできる。
+    // もとのメソッドの動きは変わらない！！！
+    // もしくは、（２）所定の動きをする関数を作成したい場合
+    // ****************************************************************************************************
+    describe("test action calling HogeService:Spy", function () {
+      var hogeMethodSpy;
+      before(function () {
+        hogeMethodSpy = sinon.spy(HogeService, "hoge");
+      });
+      after(function () {
+        console.log(HogeService ? "exist" : "not exist"); // => exist!
+        sails.services.hogeservice.hoge.restore();
+      });
+      it("test hoge service called as a spy ", function () {
+
+        var req = {param: sinon.stub().returns(123)};
+        var res = {json: sinon.spy()};// （２）の例
+
+        controller.hoge(req, res);
+
+        assert(hogeMethodSpy.calledOnce); // node.jsのAssert
+      });
+      it("test hoge service called as a spy: throws Error ", function () {
+
+        var req = {param: sinon.stub().returns(0)};
+        var res = {json: sinon.spy()};
+
+        controller.hoge(req, res);
+
+        assert(hogeMethodSpy.threw("Error"));
+      });
+    });
+  // ****************************************************************************************************
+  // Mock:あるオブジェクトの呼ばれ方をSpyのようにテストしつつ、その戻り値をStubしたい,という場合。
+  // ということは、grails-spockのモックと同じ。
+  // もしくは、（２）所定の呼ばれ方をする所定の関数をもつモックオブジェクトを作成したい場合（sinon.mock()）
+  // ****************************************************************************************************
+  describe("test action calling HogeService:Mock", function () {
+    var hogeServiceMock;
+    before(function () {
+      hogeServiceMock = sinon.mock(HogeService);
+    });
+    after(function(){
+      hogeServiceMock.restore();
+    });
+    it('test action calling HogeService:Mock', function () {
 
       // 下記のうち1つしか書けないみたい（複数併記するとエラーになる）。ちょっと不便。
-      hogeServiceMock.expects("hoge").once(); // 1回だけ呼ばれる
+      hogeServiceMock.expects("hoge").once().returns({id:123,name:"hitokun"}); // 1回だけ呼ばれるかテスト。戻り値を指定できる。
       //hogeServiceMock.expects("hoge").atLeast(1); //最低1回は呼ばれる
       //hogeServiceMock.expects("hoge").atMost(1); //最大// 1回は呼ばれる
       //hogeServiceMock.expects("hoge").exactly(1); //ちょうど指定した回数だけ呼ばれる
       //hogeServiceMock.expects("hoge").withArgs(123); //指定した引数で呼ばれる
 
-      //hogeServiceMock.expects("hoge").twice();// これだと当然エラーになる
-
       var controller = sails.controllers.user;
 
-      var req = {param:sinon.stub().returns(123)};
+      var req = {param: sinon.stub().returns(123)};
       var res = {json: sinon.spy()};
 
       controller.hoge(req, res);
 
       hogeServiceMock.verify(); // mockに課した条件が満たされているかチェックする（満たされてないならエラー発生）
-      done();
     });
-  });
-  describe("test action calling HogeService:Spy", function(){
-    it("test hoge service called as a spy ", function(done){
-
-      var hogeMethodSpy = sinon.spy(HogeService, "hoge");
-
-      var controller = sails.controllers.user;
-
-      var req = {param:sinon.stub().returns(123)};
-      var res = {json: sinon.spy()};
-
-      controller.hoge(req, res);
-
-      assert(hogeMethodSpy.calledOnce); // node.jsのAssert
-      sinon.assert.calledOnce(hogeMethodSpy); // sinonにもAssert機能が完備されている。
-      done();
-    });
-  });
-  after(function(){
+  }),
+  after(function () {
   });
 });

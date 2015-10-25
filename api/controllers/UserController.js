@@ -18,13 +18,19 @@ module.exports = {
   // Controller内で直接モデルを呼ぶケース
   findById:function(req,res){
     User.findById(req.param("id"), function (err, user) {
+      console.log(err ? "oh my god" : "great");
       if (err) return res.send(500);
       res.json(200, user); // TODO  return は無くても良かったっけ？
     });
   },
   // serviceを使うケース
   hoge:function(req,res){
-    var resp = HogeService.hoge(req.param("id"));
+    var resp;
+    try{
+      resp = HogeService.hoge(req.param("id"));
+    }catch(e){
+      console.log(e);
+    }
     return res.json(resp);
   }
 };

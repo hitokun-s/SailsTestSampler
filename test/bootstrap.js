@@ -51,11 +51,11 @@ before(function(callback) {
     callback(err, sails);
 
     // build-test-dataもどき
-    _.each(sails.models,function(model){
-      model.build = function(params){
-        return params;
-      }
-    });
+    //_.each(sails.models,function(model){
+    //  model.build = function(params){
+    //    return params;
+    //  }
+    //});
   });
 
   //global.sync = require("synchronize");

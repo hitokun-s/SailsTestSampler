@@ -8,7 +8,12 @@
 module.exports = {
 
   attributes: {
-
+    id:{
+      type:"int"
+    },
+    name: {
+      type:"string"
+    }
   }
 };
 
