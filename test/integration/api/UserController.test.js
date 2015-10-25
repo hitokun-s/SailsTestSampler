@@ -122,14 +122,13 @@ describe('UserController', function () {
     });
     it('test action calling HogeService:Mock', function () {
 
-      // 下記のうち1つしか書けないみたい（複数併記するとエラーになる）。ちょっと不便。
-      hogeServiceMock.expects("hoge").once().returns({id:123,name:"hitokun"}); // 1回だけ呼ばれるかテスト。戻り値を指定できる。
-      //hogeServiceMock.expects("hoge").atLeast(1); //最低1回は呼ばれる
-      //hogeServiceMock.expects("hoge").atMost(1); //最大// 1回は呼ばれる
-      //hogeServiceMock.expects("hoge").exactly(1); //ちょうど指定した回数だけ呼ばれる
-      //hogeServiceMock.expects("hoge").withArgs(123); //指定した引数で呼ばれる
-
-      var controller = sails.controllers.user;
+      // expectationオブジェクトを作る
+      var exp = hogeServiceMock.expects("hoge"); //expects()を２回実行するとエラーになります！
+      exp.once().returns({id:123,name:"hitokun"}); // 1回だけ呼ばれるかテスト。戻り値を指定できる。
+      exp.atLeast(1); //最低1回は呼ばれる
+      exp.atMost(1); //最大// 1回は呼ばれる
+      exp.exactly(1); //ちょうど指定した回数だけ呼ばれる
+      exp.withArgs(123); //指定した引数で呼ばれる
 
       var req = {param: sinon.stub().returns(123)};
       var res = {json: sinon.spy()};
