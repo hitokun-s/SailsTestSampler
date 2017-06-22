@@ -19,6 +19,7 @@ module.exports = {
   findById:function(req,res){
     User.findById(req.param("id"), function (err, user) {
       console.log(err ? "oh my god" : "great");
+      user[0].instanceMethod();
       if (err) return res.send(500);
       res.json(200, user); // TODO  return は無くても良かったっけ？
     });

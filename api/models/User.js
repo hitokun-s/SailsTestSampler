@@ -13,6 +13,9 @@ module.exports = {
     },
     name: {
       type:"string"
+    },
+    instanceMethod:function(){
+      console.log("hogehoge");
     }
   }
 };

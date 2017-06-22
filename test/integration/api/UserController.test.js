@@ -10,17 +10,31 @@ var sinon = require("sinon");
 
 describe('UserController', function () {
   var controller;// grails-spock風に、controller変数にしてみる。
-  before(function(){
+  before(function () {
     controller = sails.controllers.user;
   });
 
-   // ************************************************************
-   // アクション内でリソースを取得して非同期にレスポンスするケース
-   // ************************************************************
+  // ************************************************************
+  // アクション内でリソースを取得して非同期にレスポンスするケース
+  // ************************************************************
   describe('test action responding async', function () {
     // Userを作成しておく。
     before(function (done) {
+      _.each(sails.models,function(model){
+        if(model["_findOne"] || model["findOne"]){
+          //sinon.stub(model["_instanceMethods"],"instanceMethod", function(){
+          //  console.log("hihi");
+          //});
+          //model["_instanceMethods"]["instanceMethod"] = function(){
+          //  console.log("hihi");
+          //}
+          console.log("oaoa");
+        }
+      });
       User.create({id: 123, name: "hitokun"}).exec(function createCB(err, created) {
+        for (var k in created.prototype) {
+          console.log(k + ":" + created.prototype[k]);
+        }
         console.log(err ? "error:" + err : "created:" + JSON.stringify(created));
         done();
       });
@@ -29,12 +43,14 @@ describe('UserController', function () {
     it('findbyId should return User', function (done) {
 
       var req = {param: sinon.stub().returns(123)}; // req.param([param name]) という関数を置換 => params.all()　とかする場合には対応できない。
-      var res = {json: function(status, json){ //ちょっと苦しい？でもこれしか思いつかない
-        assert(status ==  200);
-        assert(json[0].id ==  123);
-        assert(json[0].name ==  "hitokun");
-        done(); // これを呼ばないとテストが終了せずtimeoutエラーになります
-      }};
+      var res = {
+        json: function (status, json) { //ちょっと苦しい？でもこれしか思いつかない
+          assert(status == 200);
+          assert(json[0].id == 123);
+          assert(json[0].name == "hitokun");
+          done(); // これを呼ばないとテストが終了せずtimeoutエラーになります
+        }
+      };
 
       controller.findById(req, res); // = UserController.findById(req, res);
 
@@ -117,14 +133,14 @@ describe('UserController', function () {
     before(function () {
       hogeServiceMock = sinon.mock(HogeService);
     });
-    after(function(){
+    after(function () {
       hogeServiceMock.restore();
     });
     it('test action calling HogeService:Mock', function () {
 
       // expectationオブジェクトを作る
       var exp = hogeServiceMock.expects("hoge"); //expects()を２回実行するとエラーになります！
-      exp.once().returns({id:123,name:"hitokun"}); // 1回だけ呼ばれるかテスト。戻り値を指定できる。
+      exp.once().returns({id: 123, name: "hitokun"}); // 1回だけ呼ばれるかテスト。戻り値を指定できる。
       exp.atLeast(1); //最低1回は呼ばれる
       exp.atMost(1); //最大// 1回は呼ばれる
       exp.exactly(1); //ちょうど指定した回数だけ呼ばれる
@@ -138,6 +154,6 @@ describe('UserController', function () {
       hogeServiceMock.verify(); // mockに課した条件が満たされているかチェックする（満たされてないならエラー発生）
     });
   }),
-  after(function () {
-  });
+    after(function () {
+    });
 });

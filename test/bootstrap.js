@@ -4,7 +4,8 @@
  * stop the server
  */
 var Sails = require('sails');
-var _ = require('lodash')
+var _ = require('lodash');
+var sinon = require("sinon");
 
 global.DOMAIN = 'http://localhost';
 global.PORT = 1420;
@@ -46,7 +47,6 @@ before(function(callback) {
       return callback(err);
     }
 
-    console.log('rodo!')
     // here you can load fixtures, etc.
     callback(err, sails);
 
